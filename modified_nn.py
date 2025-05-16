@@ -165,7 +165,7 @@ class HeteroTemporalEncoder_with_edge_features(torch.nn.Module):
         node_time_dict: Dict[NodeType, Tensor],
         node_batch_dict: Dict[NodeType, Tensor],
         edge_time_dict: Optional[Dict[EdgeType, Tensor]] = None,
-        edge_batch_dict: Optional[Dict[EdgeType, Tensor]] = None,
+        edge_index_dict: Optional[Dict[EdgeType, Tensor]] = None,
     ) -> Union[Dict[NodeType, Tensor],Tuple[Dict[NodeType, Tensor], Dict[EdgeType, Tensor]]]:
         node_out_dict: Dict[NodeType, Tensor] = {}
         edge_out_dict: Dict[EdgeType, Tensor] = {}
@@ -179,7 +179,7 @@ class HeteroTemporalEncoder_with_edge_features(torch.nn.Module):
 
         if edge_time_dict is not None:
             for edge_type, time in edge_time_dict.items():
-                rel_time = seed_time[edge_batch_dict[edge_type]] - time
+                rel_time = seed_time[node_batch_dict[edge_type[0]][edge_index_dict[edge_type][0]]] - time
                 rel_time = rel_time / (60 * 60 * 24)
                 x = self.edge_encoder_dict[EdgeTypeStr(edge_type)](rel_time)
                 x = self.edge_lin_dict[EdgeTypeStr(edge_type)](x)
@@ -200,35 +200,20 @@ class HeteroGAT(torch.nn.Module):
         super().__init__()
         self.convs = torch.nn.ModuleList()
         for _ in range(num_layers):
-            if edge_channels is not None:
-                conv = HeteroConv(
-                    {
-                        edge_type: GATConv(
-                            in_channels = (node_channels, node_channels),
-                            out_channels = node_channels,
-                            edge_dim = edge_channels,
-                            aggr = aggr,
-                            add_self_loops = False,
-                        )
-                        for edge_type in edge_types
-                    },
-                    aggr = "sum"
-                )
-                self.convs.append(conv)
-            else:
-                conv = HeteroConv(
-                    {
-                        edge_type: GATConv(
-                            in_channels = (node_channels, node_channels),
-                            out_channels = node_channels,
-                            aggr = aggr,
-                            add_self_loops = False,
-                        )
-                        for edge_type in edge_types
-                    },
-                    aggr = "sum"
-                )
-                self.convs.append(conv)
+            conv = HeteroConv(
+                {
+                    edge_type: GATConv(
+                        in_channels = (node_channels, node_channels),
+                        out_channels = node_channels,
+                        edge_dim = edge_channels,
+                        aggr = aggr,
+                        add_self_loops = False,
+                    )
+                    for edge_type in edge_types
+                },
+                aggr = "sum"
+            )
+            self.convs.append(conv)
         self.norms = torch.nn.ModuleList()
         for _ in range(num_layers):
             norm_dict = torch.nn.ModuleDict()

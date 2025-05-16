@@ -126,7 +126,7 @@ class Model(torch.nn.Module):
             node_time_dict = utils.get_node_attribute_dict(batch, "time"),
             node_batch_dict = utils.get_node_attribute_dict(batch, "batch"),
             edge_time_dict= utils.get_edge_attribute_dict(batch, "time"),
-            edge_batch_dict= utils.get_edge_attribute_dict(batch, "batch")
+            edge_index_dict = utils.get_edge_attribute_dict(batch, "edge_index"),
         )
 
         for node_type, rel_time in node_rel_time_dict.items():
